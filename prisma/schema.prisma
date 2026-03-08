@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,10 +9,36 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") 
 }
 
-model Category {
+model User {
   id        String    @id @default(cuid())
-  name      String    @unique
-  products  Product[]
+  email     String    @unique
+  name      String?
+  password  String?
+  createdAt DateTime  @default(now())
+  
+  orders    Order[]
+  accounts  Account[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
 }
 
 model Product {
@@ -23,11 +50,16 @@ model Product {
   stock       Int
   image       String
   createdAt   DateTime    @default(now())
-  
-  category    Category    @relation(fields: [categoryId], references: [id])
   categoryId  String
   
-  orderItems  OrderItem[]
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
 }
 
 model Order {
@@ -37,24 +69,19 @@ model Order {
   totalAmount   Decimal     @db.Decimal(10, 2)
   status        OrderStatus @default(PENDING)
   createdAt     DateTime    @default(now())
+  userId        String?
   
-  items         OrderItem[]
+  user  User?       @relation(fields: [userId], references: [id])
+  items OrderItem[]
 }
 
 model OrderItem {
   id        String  @id @default(cuid())
   quantity  Int
   price     Decimal @db.Decimal(10, 2)
-  
-  order     Order   @relation(fields: [orderId], references: [id])
   orderId   String
-  
-  product   Product @relation(fields: [productId], references: [id])
   productId String
-}
-
-enum OrderStatus {
-  PENDING
-  PAID
-  FAILED
+  
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
