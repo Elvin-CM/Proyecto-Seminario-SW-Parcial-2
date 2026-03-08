@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { CartWrapper } from "@/components/layout/cart-wrapper";
+import { UserButton } from "@/components/auth/user-button";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +26,11 @@ export default function RootLayout({
               Prototype<span className="text-primary">Store</span>
             </Link>
             
-            <CartWrapper />
+            {/* User + Carrito */}
+            <div className="flex items-center gap-4">
+              <UserButton />
+              <CartWrapper />
+            </div>
           </div>
         </header>
         <main className="min-h-screen bg-background">

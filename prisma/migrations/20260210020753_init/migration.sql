@@ -47,6 +47,12 @@ CREATE TABLE "OrderItem" (
     CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TABLE "User" (
+  "id" TEXT PRIMARY KEY,
+  "email" TEXT UNIQUE NOT NULL,
+  "name" TEXT,
+  "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
 
@@ -64,3 +70,10 @@ ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("or
 
 -- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "Order"
+ADD COLUMN "userId" TEXT;
+
+ALTER TABLE "Order"
+ADD CONSTRAINT "Order_userId_fkey"
+FOREIGN KEY ("userId") REFERENCES "User"("id");
