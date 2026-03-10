@@ -41,7 +41,7 @@ async function main() {
       description: 'Switches táctiles para la mejor experiencia de escritura. Retroiluminado.',
       price: 129.50,
       stock: 15,
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b91a603?w=800&q=80',
+      image: 'https://images.unsplash.com/photo-1619683322755-4545503f1afa?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       categoryId: catElectronics.id,
     },
     {
@@ -126,7 +126,7 @@ async function main() {
       description: 'Iluminación ajustable con carga inalámbrica integrada.',
       price: 45.00,
       stock: 45,
-      image: 'https://images.unsplash.com/photo-1534073828943-ef80109155cc?w=800&q=80',
+      image: 'https://images.unsplash.com/photo-1621447980929-6638614633c8?q=80&w=736&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       categoryId: catHome.id,
     },
     {
