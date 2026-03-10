@@ -2,8 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
-import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { useState, useEffect } from "react";
 
 interface AddToCartButtonProps {
   product: {
@@ -20,27 +19,49 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
   const getAvailableStock = useCartStore((state) => state.getAvailableStock);
 
   const [quantity, setQuantity] = useState(1);
+  const [mounted, setMounted] = useState(false);
+  const [realStock, setRealStock] = useState(product.stock); // stock desde BD
 
-  const availableStock = getAvailableStock(product.id, product.stock);
-  const isOutOfStock = availableStock === 0;
+  // Marca como montado
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Polling cada 10 segundos
+  useEffect(() => {
+    const fetchStock = async () => {
+      try {
+        const res = await fetch(`/api/stock/${product.id}`);
+        const data = await res.json();
+        if (typeof data.stock === "number") {
+          setRealStock(data.stock);
+        }
+      } catch (e) {
+        // Si falla, mantiene el stock anterior
+      }
+    };
+
+    fetchStock(); // Llama inmediatamente al montar
+    const interval = setInterval(fetchStock, 10000); // Luego cada 10s
+    return () => clearInterval(interval); // Limpia al desmontar
+  }, [product.id]);
+
+  const availableStock = getAvailableStock(product.id, realStock);
+  const isOutOfStock = mounted && availableStock === 0;
 
   const decrease = () => setQuantity((q) => Math.max(1, q - 1));
   const increase = () => setQuantity((q) => Math.min(availableStock, q + 1));
 
   const handleAdd = () => {
-    if (quantity > availableStock) {
-      toast.error("No puedes agregar más productos que el stock disponible.");
-      return;
-    }
+    if (quantity > availableStock) return;
     addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.image,
       quantity,
-      maxStock: product.stock,
+      maxStock: realStock,
     });
-    toast.success(`${product.name} agregado al carrito.`);
     setQuantity(1);
   };
 
@@ -55,7 +76,10 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Stock disponible: <span className="font-semibold text-foreground">{availableStock}</span>
+        Stock disponible:{" "}
+        <span className="font-semibold text-foreground">
+          {mounted ? availableStock : product.stock}
+        </span>
       </p>
 
       <div className="flex items-center gap-3">

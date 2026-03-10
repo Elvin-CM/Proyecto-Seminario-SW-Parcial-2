@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
@@ -14,6 +15,19 @@ interface CartItemProps {
 export function CartItem({ item }: CartItemProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
+
+  const [remainingTime, setRemainingTime] = useState(0);
+
+  useEffect(() => {
+    const updateTime = () => {
+      setRemainingTime(Math.max(0, Math.floor((item.expiresAt - Date.now()) / 60000)));
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 60000); // Actualizar cada minuto
+
+    return () => clearInterval(interval);
+  }, [item.expiresAt]);
 
   const handleIncrement = () => {
     if (item.quantity < item.maxStock) {
@@ -51,6 +65,9 @@ export function CartItem({ item }: CartItemProps) {
             <h3 className="font-medium text-gray-900">{item.name}</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {formatCurrency(item.price)}
+            </p>
+            <p className="text-xs text-red-500">
+              Reserva expira en {remainingTime} minutos
             </p>
           </div>
 
