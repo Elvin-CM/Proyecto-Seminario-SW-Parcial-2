@@ -23,7 +23,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  // Initialize state from URL
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [showInStock, setShowInStock] = useState(searchParams.get("inStock") === "true");
   const currentCategory = searchParams.get("cat");
@@ -42,14 +41,13 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
       }
       
       startTransition(() => {
-        router.push(`/?${params.toString()}`);
+        router.push(`/catalog?${params.toString()}`);
       });
     }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [query, router, searchParams]);
 
-  // Handle Category Click
   const toggleCategory = useCallback((categoryName: string) => {
     const params = new URLSearchParams(searchParams.toString());
     const currentCat = params.get("cat");
@@ -61,11 +59,10 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     }
     
     startTransition(() => {
-      router.push(`/?${params.toString()}`);
+      router.push(`/catalog?${params.toString()}`);
     });
   }, [searchParams, router]);
 
-  // Handle "Show in stock only" toggle
   const toggleInStock = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     const newInStock = !showInStock;
@@ -78,7 +75,7 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     }
     
     startTransition(() => {
-      router.push(`/?${params.toString()}`);
+      router.push(`/catalog?${params.toString()}`);
     });
   }, [searchParams, router, showInStock]);
 
@@ -86,7 +83,7 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     setQuery("");
     setShowInStock(false);
     startTransition(() => {
-      router.push("/");
+      router.push("/catalog");
     });
   };
 
@@ -97,7 +94,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     <div>
       {/* Sidebar for large screens */}
       <div className="hidden lg:block w-64 space-y-6">
-        {/* Search Input */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -108,7 +104,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
           />
         </div>
 
-        {/* Categories */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Categorías</h3>
           <div className="flex flex-wrap gap-2">
@@ -131,7 +126,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
           </div>
         </div>
 
-        {/* Stock Filter */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Disponibilidad</h3>
           <Button
@@ -152,7 +146,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
           </Button>
         </div>
 
-        {/* Clear Filters */}
         {hasActiveFilters && (
           <Button 
             variant="ghost" 
@@ -169,7 +162,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
           </Button>
         )}
 
-        {/* Active Filters Display */}
         {hasActiveFilters && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">Filtros activos:</p>
@@ -194,7 +186,7 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
         )}
       </div>
 
-      {/* Mobile Filters - Drawer from left */}
+      {/* Mobile Filters */}
       <div className="lg:hidden">
         <Drawer>
           <DrawerTrigger asChild>
@@ -212,7 +204,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
             <div className="space-y-6 py-4 mx-4">
               <h2 className="text-lg font-semibold">Filtros</h2>
               
-              {/* Search Input */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Buscar</h3>
                 <div className="relative">
@@ -226,7 +217,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
                 </div>
               </div>
 
-              {/* Categories */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Categorías</h3>
                 <div className="flex flex-wrap gap-2">
@@ -249,7 +239,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
                 </div>
               </div>
 
-              {/* Stock Filter */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Disponibilidad</h3>
                 <Button
@@ -270,7 +259,6 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
                 </Button>
               </div>
 
-              {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button 
                   variant="ghost" 
@@ -293,4 +281,3 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     </div>
   );
 }
-

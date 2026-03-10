@@ -53,7 +53,8 @@ model Product {
   categoryId  String
   
   category   Category    @relation(fields: [categoryId], references: [id])
-  orderItems OrderItem[]
+    orderItems    OrderItem[]
+  reservations  StockReservation[]
 }
 
 enum OrderStatus {
@@ -83,5 +84,16 @@ model OrderItem {
   productId String
   
   order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model StockReservation {
+  id         String   @id @default(cuid())
+  productId  String
+  quantity   Int
+  sessionId  String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
   product Product @relation(fields: [productId], references: [id])
 }

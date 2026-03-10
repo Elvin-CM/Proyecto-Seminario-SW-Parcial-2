@@ -12,5 +12,5 @@ export function GlobalEffects() {
     return () => clearInterval(interval);
   }, []);
 
-  return null; // No renderiza nada
+  return null; 
 }

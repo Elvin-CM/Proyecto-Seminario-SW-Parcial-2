@@ -80,7 +80,6 @@ export async function login(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      // Por ahora solo redirigimos con error en URL
       redirect("/auth/login?error=invalid");
     }
     throw error;
@@ -116,4 +115,103 @@ export async function loginWithGoogle(): Promise<void> {
 
 export async function logout(): Promise<void> {
   await signOut({ redirectTo: "/" });
+}
+
+// ========== STOCK RESERVATION ACTIONS ==========
+export async function reserveStock(
+  productId: string,
+  quantity: number,
+  sessionId: string
+) {
+  try {
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutos
+
+    await prisma.$transaction(async (tx) => {
+      // Limpiar reservas expiradas de este producto
+      await tx.stockReservation.deleteMany({
+        where: { productId, expiresAt: { lt: new Date() } },
+      });
+
+      // Calcular stock reservado actualmente
+      const reservations = await tx.stockReservation.aggregate({
+        where: { productId, expiresAt: { gt: new Date() } },
+        _sum: { quantity: true },
+      });
+
+      const product = await tx.product.findUnique({
+        where: { id: productId },
+        select: { stock: true },
+      });
+
+      if (!product) throw new Error("Producto no encontrado");
+
+      const totalReserved = reservations._sum.quantity ?? 0;
+      const availableStock = product.stock - totalReserved;
+
+      if (availableStock < quantity) {
+        throw new Error("Stock insuficiente");
+      }
+
+      // Crear o actualizar reserva de esta sesión
+      const existing = await tx.stockReservation.findFirst({
+        where: { productId, sessionId },
+      });
+
+      if (existing) {
+        await tx.stockReservation.update({
+          where: { id: existing.id },
+          data: { quantity, expiresAt },
+        });
+      } else {
+        await tx.stockReservation.create({
+          data: { productId, quantity, sessionId, expiresAt },
+        });
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    return { success: false, error: message };
+  }
+}
+
+export async function releaseReservation(
+  productId: string,
+  sessionId: string
+) {
+  try {
+    await prisma.stockReservation.deleteMany({
+      where: { productId, sessionId },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false };
+  }
+}
+
+export async function getAvailableStockFromDB(productId: string) {
+  try {
+    // Limpiar expiradas
+    await prisma.stockReservation.deleteMany({
+      where: { productId, expiresAt: { lt: new Date() } },
+    });
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { stock: true },
+    });
+
+    if (!product) return { stock: 0 };
+
+    const reservations = await prisma.stockReservation.aggregate({
+      where: { productId, expiresAt: { gt: new Date() } },
+      _sum: { quantity: true },
+    });
+
+    const totalReserved = reservations._sum.quantity ?? 0;
+    return { stock: product.stock - totalReserved };
+  } catch {
+    return { stock: 0 };
+  }
 }

@@ -7,9 +7,19 @@ import { Button } from "@/components/ui/button";
 import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "react-hot-toast";
+import { releaseReservation } from "@/lib/actions";
 
 interface CartItemProps {
   item: CartItemType;
+}
+
+function getSessionId(): string {
+  let sessionId = localStorage.getItem("cart-session-id");
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem("cart-session-id", sessionId);
+  }
+  return sessionId;
 }
 
 export function CartItem({ item }: CartItemProps) {
@@ -24,7 +34,7 @@ export function CartItem({ item }: CartItemProps) {
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 60000); // Actualizar cada minuto
+    const interval = setInterval(updateTime, 60000);
 
     return () => clearInterval(interval);
   }, [item.expiresAt]);
@@ -41,7 +51,9 @@ export function CartItem({ item }: CartItemProps) {
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
+    const sessionId = getSessionId();
+    await releaseReservation(item.id, sessionId);
     removeItem(item.id);
     toast.success(`${item.name} eliminado del carrito.`);
   };
@@ -107,7 +119,7 @@ export function CartItem({ item }: CartItemProps) {
           </div>
         </div>
         
-        {/* Subtotal for this item */}
+        {/* Subtotal */}
         <div className="flex justify-between items-end mt-2">
           <p className="text-sm text-muted-foreground">
             Stock disponible: {item.maxStock}
