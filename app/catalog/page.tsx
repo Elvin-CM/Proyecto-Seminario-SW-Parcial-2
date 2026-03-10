@@ -50,7 +50,7 @@ async function getProducts(params: SearchParams) {
   });
 }
 
-export default async function StorefrontPage({
+export default async function CatalogPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
@@ -71,7 +71,7 @@ export default async function StorefrontPage({
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Catálogo</h1>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Catálogo</h1>
         <p className="text-muted-foreground mb-6">
           Explora nuestra colección
         </p>

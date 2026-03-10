@@ -3,10 +3,11 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, Check, Filter } from "lucide-react";
 import { useCallback, useState, useEffect, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 
 interface Category {
   id: string;
@@ -24,6 +25,7 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
 
   // Initialize state from URL
   const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [showInStock, setShowInStock] = useState(searchParams.get("inStock") === "true");
   const currentCategory = searchParams.get("cat");
 
   useEffect(() => {
@@ -63,61 +65,232 @@ export function SearchFilters({ categories }: SearchFiltersProps) {
     });
   }, [searchParams, router]);
 
+  // Handle "Show in stock only" toggle
+  const toggleInStock = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const newInStock = !showInStock;
+    setShowInStock(newInStock);
+    
+    if (newInStock) {
+      params.set("inStock", "true");
+    } else {
+      params.delete("inStock");
+    }
+    
+    startTransition(() => {
+      router.push(`/?${params.toString()}`);
+    });
+  }, [searchParams, router, showInStock]);
+
   const clearAll = () => {
     setQuery("");
+    setShowInStock(false);
     startTransition(() => {
       router.push("/");
     });
   };
 
-  const hasActiveFilters = query || currentCategory;
+  const hasActiveFilters = query || currentCategory || showInStock;
+  const activeFilterCount = (query ? 1 : 0) + (currentCategory ? 1 : 0) + (showInStock ? 1 : 0);
 
   return (
-    <div className="space-y-6 mb-8">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="pl-10 pr-10"
-        />
-        {isPending && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    <div>
+      {/* Sidebar for large screens */}
+      <div className="hidden lg:block w-64 space-y-6">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar productos..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Categories */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Categorías</h3>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Badge
+                key={category.id}
+                variant={currentCategory === category.name ? "default" : "outline"}
+                onClick={() => toggleCategory(category.name)}
+                className={cn(
+                  "cursor-pointer transition-all hover:scale-105",
+                  currentCategory === category.name 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                )}
+              >
+                {currentCategory === category.name && <Check className="h-3 w-3 mr-1" />}
+                {category.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Stock Filter */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Disponibilidad</h3>
+          <Button
+            variant={showInStock ? "default" : "outline"}
+            onClick={toggleInStock}
+            className={cn(
+              "w-full justify-start gap-2",
+              showInStock && "bg-primary text-primary-foreground"
+            )}
+          >
+            <div className={cn(
+              "w-4 h-4 border rounded flex items-center justify-center",
+              showInStock ? "bg-white border-white" : "border-muted-foreground"
+            )}>
+              {showInStock && <Check className="h-3 w-3 text-primary" />}
+            </div>
+            Ver solo productos con Stock
+          </Button>
+        </div>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            onClick={clearAll} 
+            disabled={isPending}
+            className="w-full text-muted-foreground hover:text-destructive"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <X className="h-4 w-4 mr-2" />
+            )}
+            Limpiar filtros
+          </Button>
+        )}
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Filtros activos:</p>
+            <div className="flex flex-wrap gap-1">
+              {query && (
+                <Badge variant="secondary" className="text-xs">
+                  Búsqueda: {query}
+                </Badge>
+              )}
+              {currentCategory && (
+                <Badge variant="secondary" className="text-xs">
+                  Categoría: {currentCategory}
+                </Badge>
+              )}
+              {showInStock && (
+                <Badge variant="secondary" className="text-xs">
+                  Solo Stock
+                </Badge>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      <div className={cn("flex flex-wrap gap-2 items-center transition-opacity", isPending ? "opacity-50" : "opacity-100")}>
-        <span className="text-sm text-muted-foreground mr-2">Filtros:</span>
-        
-        {categories.map((cat) => {
-          const isActive = currentCategory === cat.name;
-          return (
-            <Badge
-              key={cat.id}
-              variant={isActive ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/90 px-3 py-1 transition-colors"
-              onClick={() => toggleCategory(cat.name)}
-            >
-              {cat.name}
-            </Badge>
-          );
-        })}
+      {/* Mobile Filters - Drawer from left */}
+      <div className="lg:hidden">
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="w-full mb-4">
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+              {hasActiveFilters && (
+                <span className="ml-2 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="w-[300px] sm:w-[350px]">
+            <div className="space-y-6 py-4 mx-4">
+              <h2 className="text-lg font-semibold">Filtros</h2>
+              
+              {/* Search Input */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Buscar</h3>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar productos..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
 
-        {hasActiveFilters && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearAll}
-            className="h-6 px-2 text-muted-foreground hover:text-destructive"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Limpiar
-          </Button>
-        )}
+              {/* Categories */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Categorías</h3>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => (
+                    <Badge
+                      key={category.id}
+                      variant={currentCategory === category.name ? "default" : "outline"}
+                      onClick={() => toggleCategory(category.name)}
+                      className={cn(
+                        "cursor-pointer transition-all",
+                        currentCategory === category.name 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-secondary text-secondary-foreground"
+                      )}
+                    >
+                      {currentCategory === category.name && <Check className="h-3 w-3 mr-1" />}
+                      {category.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stock Filter */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Disponibilidad</h3>
+                <Button
+                  variant={showInStock ? "default" : "outline"}
+                  onClick={toggleInStock}
+                  className={cn(
+                    "w-full justify-start gap-2",
+                    showInStock && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  <div className={cn(
+                    "w-4 h-4 border rounded flex items-center justify-center",
+                    showInStock ? "bg-white border-white" : "border-muted-foreground"
+                  )}>
+                    {showInStock && <Check className="h-3 w-3 text-primary" />}
+                  </div>
+                  Solo productos con stock
+                </Button>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  onClick={clearAll} 
+                  disabled={isPending}
+                  className="w-full text-muted-foreground hover:text-destructive"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4 mr-2" />
+                  )}
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
     </div>
   );
 }
+

@@ -20,19 +20,26 @@ function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-24 flex flex-col items-center justify-center text-center">
-        <div className="bg-gray-100 p-6 rounded-full mb-6">
-          <ShoppingBag className="h-12 w-12 text-muted-foreground" />
+      <div className="container mx-auto px-4 py-24 flex flex-col items-center justify-center text-center min-h-[60vh]">
+        <div className="relative mb-8">
+          <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center">
+            <ShoppingBag className="h-16 w-16 text-gray-400" />
+          </div>
+          <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-black rounded-full flex items-center justify-center">
+            <span className="text-white text-lg">0</span>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold mb-2">Tu carrito está vacío</h1>
-        <p className="text-muted-foreground mb-8 max-w-md">
-          Parece que aún no has agregado productos. Explora nuestro catálogo para encontrar lo que buscas.
+        <h1 className="text-3xl font-bold mb-3 text-black">Tu carrito está vacío</h1>
+        <p className="text-gray-500 mb-8 max-w-md text-lg">
+          Explora nuestro catálogo y descubre productos increíbles que tenemos para ti.
         </p>
-        <Button asChild size="lg">
-          <Link href="/">
-            Explorar Productos
-          </Link>
-        </Button>
+        <Link href="/catalog">
+          <Button size="lg" className="bg-black hover:bg-gray-800 text-white px-8 py-6 text-lg">
+            <ShoppingBag className="mr-2 h-5 w-5" />
+            Explorar Catálogo
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </Link>
       </div>
     );
   }

@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 
 interface CartItemProps {
   item: CartItemType;
@@ -24,6 +25,11 @@ export function CartItem({ item }: CartItemProps) {
     if (item.quantity > 1) {
       updateQuantity(item.id, item.quantity - 1);
     }
+  };
+
+  const handleRemove = () => {
+    removeItem(item.id);
+    toast.success(`${item.name} eliminado del carrito.`);
   };
 
   return (
@@ -76,7 +82,8 @@ export function CartItem({ item }: CartItemProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-destructive hover:text-destructive/90"
-              onClick={() => removeItem(item.id)}
+              onClick={handleRemove}
+              aria-label="Remove item"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

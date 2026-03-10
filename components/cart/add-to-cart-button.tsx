@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface AddToCartButtonProps {
   product: {
@@ -27,7 +28,10 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
   const increase = () => setQuantity((q) => Math.min(availableStock, q + 1));
 
   const handleAdd = () => {
-    if (quantity > availableStock) return;
+    if (quantity > availableStock) {
+      toast.error("No puedes agregar más productos que el stock disponible.");
+      return;
+    }
     addItem({
       id: product.id,
       name: product.name,
@@ -36,6 +40,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       quantity,
       maxStock: product.stock,
     });
+    toast.success(`${product.name} agregado al carrito.`);
     setQuantity(1);
   };
 
