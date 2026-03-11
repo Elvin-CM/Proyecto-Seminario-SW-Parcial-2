@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -18,6 +17,7 @@ interface CartState {
   addItem: (item: Omit<CartItem, "addedAt" | "expiresAt">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateItemMaxStock: (id: string, maxStock: number) => void; // NUEVO
   clearCart: () => void;
   removeExpiredItems: () => void;
   getTotalItems: () => number;
@@ -51,6 +51,7 @@ export const useCartStore = create<CartState>()(
                 ? {
                     ...item,
                     quantity: newQuantity,
+                    maxStock: newItem.maxStock, // NUEVO: actualizar maxStock al re-agregar
                     expiresAt: expiration
                   }
                 : item
@@ -87,6 +88,15 @@ export const useCartStore = create<CartState>()(
             item.id === id
               ? { ...item, quantity: quantity, expiresAt: expiration }
               : item
+          ),
+        });
+      },
+
+      // NUEVO: actualiza solo el maxStock de un item sin tocar el resto
+      updateItemMaxStock: (id, maxStock) => {
+        set({
+          items: get().items.map((item) =>
+            item.id === id ? { ...item, maxStock } : item
           ),
         });
       },
