@@ -15,6 +15,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Allow signing in with Google when a credentials user with the same email already exists.
+            // This links the OAuth account to the existing user by email.
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
