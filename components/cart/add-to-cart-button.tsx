@@ -28,6 +28,7 @@ function getSessionId(): string {
 export function AddToCartButton({ product }: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
+  const updateItemMaxStock = useCartStore((state) => state.updateItemMaxStock); // NUEVO
   const items = useCartStore((state) => state.items);
 
   const [quantity, setQuantity] = useState(1);
@@ -45,12 +46,18 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
     const fetchStock = async () => {
       const data = await getAvailableStockFromDB(product.id);
       setRealStock(data.stock);
+
+      // NUEVO: si el item ya está en el carrito, sincronizar su maxStock con el real de BD
+      const itemInStore = items.find((i) => i.id === product.id);
+      if (itemInStore) {
+        updateItemMaxStock(product.id, data.stock + itemInStore.quantity);
+      }
     };
 
     fetchStock();
     const interval = setInterval(fetchStock, 10000);
     return () => clearInterval(interval);
-  }, [product.id]);
+  }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stock disponible = stock BD - reservas activas de otros - lo que yo tengo en carrito
   const itemInCart = items.find((i) => i.id === product.id);
@@ -77,7 +84,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       price: product.price,
       image: product.image,
       quantity,
-      maxStock: product.stock,
+      maxStock: realStock + inMyCart, // CORREGIDO: stock real, no el estático de la página
     });
 
     setQuantity(1);

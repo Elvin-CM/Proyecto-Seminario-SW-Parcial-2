@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "react-hot-toast";
-import { releaseReservation } from "@/lib/actions";
+import { releaseReservation, getAvailableStockFromDB } from "@/lib/actions"; // NUEVO: importar getAvailableStockFromDB
 
 interface CartItemProps {
   item: CartItemType;
@@ -25,8 +25,25 @@ function getSessionId(): string {
 export function CartItem({ item }: CartItemProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
+  const updateItemMaxStock = useCartStore((state) => state.updateItemMaxStock); // NUEVO
 
   const [remainingTime, setRemainingTime] = useState(0);
+  const [realStock, setRealStock] = useState<number | null>(null); // NUEVO: stock real desde BD
+
+  // NUEVO: cargar stock real al montar y cada 15 segundos
+  useEffect(() => {
+    const fetchStock = async () => {
+      const data = await getAvailableStockFromDB(item.id);
+      // stock disponible en BD + lo que yo tengo = total que podría tener
+      const totalForMe = data.stock + item.quantity;
+      setRealStock(data.stock);
+      updateItemMaxStock(item.id, totalForMe);
+    };
+
+    fetchStock();
+    const interval = setInterval(fetchStock, 15000);
+    return () => clearInterval(interval);
+  }, [item.id, item.quantity, updateItemMaxStock]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -122,7 +139,8 @@ export function CartItem({ item }: CartItemProps) {
         {/* Subtotal */}
         <div className="flex justify-between items-end mt-2">
           <p className="text-sm text-muted-foreground">
-            Stock disponible: {item.maxStock}
+            {/* CORREGIDO: mostrar stock real desde BD, no el maxStock congelado */}
+            Stock disponible: {realStock !== null ? realStock : item.maxStock}
           </p>
           <p className="font-semibold">
             {formatCurrency(item.price * item.quantity)}
