@@ -1,12 +1,11 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL") 
-  directUrl = env("POSTGRES_URL_NON_POOLING") 
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model User {
@@ -15,9 +14,10 @@ model User {
   name      String?
   password  String?
   createdAt DateTime  @default(now())
-  
-  orders    Order[]
-  accounts  Account[]
+
+  orders   Order[]
+  accounts Account[]
+  cart     Cart?
 }
 
 model Account {
@@ -29,9 +29,9 @@ model Account {
   access_token      String?
   refresh_token     String?
   expires_at        Int?
-  
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([provider, providerAccountId])
 }
 
@@ -42,19 +42,20 @@ model Category {
 }
 
 model Product {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String      @unique
+  slug        String   @unique
   description String
-  price       Decimal     @db.Decimal(10, 2)
+  price       Decimal  @db.Decimal(10, 2)
   stock       Int
   image       String
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime @default(now())
   categoryId  String
-  
-  category   Category    @relation(fields: [categoryId], references: [id])
-    orderItems    OrderItem[]
-  reservations  StockReservation[]
+
+  category     Category           @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+  reservations StockReservation[]
+  cartEntries  CartEntry[]
 }
 
 enum OrderStatus {
@@ -71,7 +72,7 @@ model Order {
   status        OrderStatus @default(PENDING)
   createdAt     DateTime    @default(now())
   userId        String?
-  
+
   user  User?       @relation(fields: [userId], references: [id])
   items OrderItem[]
 }
@@ -82,18 +83,41 @@ model OrderItem {
   price     Decimal @db.Decimal(10, 2)
   orderId   String
   productId String
-  
+
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
 }
 
 model StockReservation {
-  id         String   @id @default(cuid())
-  productId  String
-  quantity   Int
-  sessionId  String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  productId String
+  quantity  Int
+  sessionId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  updatedAt DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartEntry[]
+}
+
+model CartEntry {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
 }

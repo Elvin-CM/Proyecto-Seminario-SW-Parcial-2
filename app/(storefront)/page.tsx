@@ -4,6 +4,9 @@ import { SearchFilters } from "@/components/catalog/search-filters";
 import { PackageOpen } from "lucide-react";
 import { Prisma } from "@prisma/client";
 
+// Forzar que siempre se lea de la DB, nunca caché
+export const dynamic = "force-dynamic";
+
 interface SearchParams {
   q?: string;
   cat?: string;
@@ -34,7 +37,6 @@ async function getProducts(params: SearchParams) {
     };
   }
 
-  // Filter by stock availability
   if (inStock === "true") {
     where.stock = {
       gt: 0,
@@ -50,23 +52,54 @@ async function getProducts(params: SearchParams) {
   });
 }
 
+async function getActiveReservations() {
+  // Limpiar reservas expiradas
+  await prisma.stockReservation.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  });
+
+  // Obtener todas las reservas activas agrupadas por producto
+  const reservations = await prisma.stockReservation.groupBy({
+    by: ["productId"],
+    where: { expiresAt: { gt: new Date() } },
+    _sum: { quantity: true },
+  });
+
+  // Convertir a mapa productId -> cantidadReservada
+  const reservationMap = new Map<string, number>();
+  for (const r of reservations) {
+    reservationMap.set(r.productId, r._sum.quantity ?? 0);
+  }
+  return reservationMap;
+}
+
 export default async function StorefrontPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  
-  const [products, categories] = await Promise.all([
+
+  const [products, categories, reservationMap] = await Promise.all([
     getProducts(params),
     getCategories(),
+    getActiveReservations(),
   ]);
 
-  // Filter products with stock on client side if needed (for real-time stock)
+  // Calcular stock disponible real (stock - reservas activas)
+  const productsWithAvailableStock = products.map((product) => {
+    const reserved = reservationMap.get(product.id) ?? 0;
+    const availableStock = Math.max(0, product.stock - reserved);
+    return {
+      ...product,
+      stock: availableStock,
+    };
+  });
+
   const showInStock = params.inStock === "true";
-  const filteredProducts = showInStock 
-    ? products.filter(p => p.stock > 0)
-    : products;
+  const filteredProducts = showInStock
+    ? productsWithAvailableStock.filter((p) => p.stock > 0)
+    : productsWithAvailableStock;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -78,12 +111,10 @@ export default async function StorefrontPage({
       </section>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar with Filters - Left side on desktop */}
         <aside className="w-full lg:w-64 flex-shrink-0">
           <SearchFilters categories={categories} />
         </aside>
 
-        {/* Products Grid - Right side on desktop */}
         <div className="flex-1">
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -96,9 +127,11 @@ export default async function StorefrontPage({
               <div className="bg-gray-100 p-4 rounded-full mb-4">
                 <PackageOpen className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold">No se encontraron productos</h3>
+              <h3 className="text-lg font-semibold">
+                No se encontraron productos
+              </h3>
               <p className="text-muted-foreground max-w-sm mt-2">
-                No pudimos encontrar nada que coincida con "{params.q}" 
+                No pudimos encontrar nada que coincida con &quot;{params.q}&quot;
                 {params.cat ? ` en ${params.cat}` : ""}
                 {params.inStock ? " con stock disponible" : ""}.
               </p>
@@ -109,4 +142,3 @@ export default async function StorefrontPage({
     </div>
   );
 }
-

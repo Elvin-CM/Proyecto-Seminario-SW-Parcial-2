@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { CartItem } from "@/lib/store";
 import { Prisma } from "@prisma/client";
-import { signIn, signOut } from "@/lib/auth";
+import { signIn, signOut, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
@@ -15,6 +15,9 @@ export async function createOrder(
   customerEmail: string
 ) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
+
     const order = await prisma.$transaction(async (tx) => {
       let calculatedTotal = 0;
       const orderItemsData = [];
@@ -49,10 +52,11 @@ export async function createOrder(
 
       const newOrder = await tx.order.create({
         data: {
-          paypalOrderId: paypalOrderId,
-          customerEmail: customerEmail,
+          paypalOrderId,
+          customerEmail,
           totalAmount: new Prisma.Decimal(calculatedTotal),
           status: "PAID",
+          userId,
           items: {
             create: orderItemsData,
           },
@@ -67,6 +71,35 @@ export async function createOrder(
     console.error("Transaction Failed:", error);
     const message = error instanceof Error ? error.message : "Error desconocido";
     return { success: false, error: message };
+  }
+}
+
+// ========== USER ORDERS ==========
+export async function getUserOrders() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "No autenticado", orders: [] };
+  }
+
+  try {
+    const orders = await prisma.order.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, image: true, slug: true },
+            },
+          },
+        },
+      },
+    });
+
+    return { success: true, orders };
+  } catch {
+    return { success: false, error: "Error al obtener pedidos", orders: [] };
   }
 }
 
@@ -93,7 +126,7 @@ export async function register(formData: FormData): Promise<void> {
   const name = formData.get("name") as string;
 
   const exists = await prisma.user.findUnique({ where: { email } });
-  
+
   if (exists) {
     redirect("/auth/register?error=exists");
   }
@@ -124,15 +157,13 @@ export async function reserveStock(
   sessionId: string
 ) {
   try {
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutos
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     await prisma.$transaction(async (tx) => {
-      // Limpiar reservas expiradas de este producto
       await tx.stockReservation.deleteMany({
         where: { productId, expiresAt: { lt: new Date() } },
       });
 
-      // Calcular stock reservado actualmente
       const reservations = await tx.stockReservation.aggregate({
         where: { productId, expiresAt: { gt: new Date() } },
         _sum: { quantity: true },
@@ -152,7 +183,6 @@ export async function reserveStock(
         throw new Error("Stock insuficiente");
       }
 
-      // Crear o actualizar reserva de esta sesión
       const existing = await tx.stockReservation.findFirst({
         where: { productId, sessionId },
       });
@@ -185,14 +215,13 @@ export async function releaseReservation(
       where: { productId, sessionId },
     });
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false };
   }
 }
 
 export async function getAvailableStockFromDB(productId: string) {
   try {
-    // Limpiar expiradas
     await prisma.stockReservation.deleteMany({
       where: { productId, expiresAt: { lt: new Date() } },
     });

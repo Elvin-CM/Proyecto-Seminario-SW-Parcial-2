@@ -44,12 +44,10 @@ export default function RootLayout({
           {children}
         </main>
 
-        {/* Footer */}
         <footer className="bg-gray-900 text-gray-300">
           <div className="container mx-auto px-4 py-12">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               
-              {/* Empresa */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-white">
                   <ShoppingBag className="h-6 w-6" />
@@ -71,18 +69,17 @@ export default function RootLayout({
                 </div>
               </div>
 
-              {/* Enlaces rápidos */}
               <div className="space-y-4">
                 <h3 className="text-white font-semibold">Enlaces Rápidos</h3>
                 <ul className="space-y-2 text-sm">
                   <li><Link href="/catalog" className="hover:text-white transition-colors">Catálogo</Link></li>
+                  <li><Link href="/orders" className="hover:text-white transition-colors">Mis Pedidos</Link></li>
                   <li><Link href="/cart" className="hover:text-white transition-colors">Carrito</Link></li>
                   <li><Link href="/checkout" className="hover:text-white transition-colors">Checkout</Link></li>
                   <li><Link href="/track" className="hover:text-white transition-colors">Rastrear Pedido</Link></li>
                 </ul>
               </div>
 
-              {/* Categorías */}
               <div className="space-y-4">
                 <h3 className="text-white font-semibold">Categorías</h3>
                 <ul className="space-y-2 text-sm">
@@ -93,7 +90,6 @@ export default function RootLayout({
                 </ul>
               </div>
 
-              {/* Contacto */}
               <div className="space-y-4">
                 <h3 className="text-white font-semibold">Contacto</h3>
                 <ul className="space-y-3 text-sm">
