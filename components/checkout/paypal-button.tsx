@@ -2,14 +2,24 @@
 
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useCartStore } from "@/lib/store";
-import { createOrder } from "@/lib/actions";
+import { clearMyCart, createOrder, releaseReservation, validateCartItemsStock } from "@/lib/actions";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export function PayPalCheckout() {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const getSessionId = () => {
+    let sessionId = localStorage.getItem("cart-session-id");
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem("cart-session-id", sessionId);
+    }
+    return sessionId;
+  };
 
   const totalAmount = items.reduce(
     (acc, item) => acc + item.price * item.quantity, 
@@ -58,6 +68,16 @@ export function PayPalCheckout() {
           onApprove={async (data, actions) => {
             try {
               setIsProcessing(true); // Show overlay
+
+              // Validate stock right before capture to avoid charging without stock.
+              const validation = await validateCartItemsStock(
+                items.map((i) => ({ id: i.id, quantity: i.quantity }))
+              );
+              if (!validation.ok) {
+                setIsProcessing(false);
+                toast.error("Stock insuficiente");
+                return;
+              }
               
               // 1. Capture Payment
               const details = await actions.order?.capture();
@@ -71,6 +91,11 @@ export function PayPalCheckout() {
 
               if (result.success && result.orderId) {
                 // 3. SUCCESS!
+                const cleared = await clearMyCart();
+                if (!cleared.success && cleared.error === "No autenticado") {
+                  const sessionId = getSessionId();
+                  await Promise.all(items.map((i) => releaseReservation(i.id, sessionId)));
+                }
                 clearCart(); 
                 
                 window.location.href = `/track/${result.orderId}?success=true`;
@@ -83,12 +108,12 @@ export function PayPalCheckout() {
               console.error("Checkout Error:", error);
               setIsProcessing(false);
             const message = error instanceof Error ? error.message : "Error desconocido al procesar el pago";
-            alert(`Error: ${message}`);
+            toast.error(message);
             }
           }}
           onError={(err) => {
             console.error("PayPal SDK Error:", err);
-            alert("Error de conexión con PayPal");
+            toast.error("Error de conexion con PayPal");
           }}
         />
       </div>

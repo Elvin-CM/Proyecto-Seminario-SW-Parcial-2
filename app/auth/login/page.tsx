@@ -1,5 +1,6 @@
 import { login, loginWithGoogle } from "@/lib/actions";
 import Link from "next/link";
+import { LoginToasts } from "@/components/auth/auth-toasts";
 
 export default function LoginPage({
   searchParams,
@@ -10,18 +11,7 @@ export default function LoginPage({
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-bold text-center">Iniciar Sesión</h1>
-
-        {searchParams.error && (
-          <p className="text-red-500 text-sm text-center">
-            Credenciales inválidas
-          </p>
-        )}
-
-        {searchParams.success && (
-          <p className="text-green-500 text-sm text-center">
-            ¡Cuenta creada! Inicia sesión
-          </p>
-        )}
+        <LoginToasts error={searchParams.error} success={searchParams.success} />
 
         <form action={loginWithGoogle}>
           <button className="w-full border rounded-lg py-2 hover:bg-gray-50">

@@ -8,20 +8,50 @@ import { PayPalCheckout } from "@/components/checkout/paypal-button";
 import { ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { validateCartItemsStock } from "@/lib/actions";
+import { toast } from "react-hot-toast";
 
 function CheckoutPage() {
   const items = useCartStore((state) => state.items);
   const router = useRouter();
+  const [stockOk, setStockOk] = useState(true);
+  const stockToastShown = useRef(false);
+  const isEmpty = items.length === 0;
+
+  const stockPayload = useMemo(
+    () => items.map((i) => ({ id: i.id, quantity: i.quantity })),
+    [items]
+  );
 
   // Redirect if empty
   useEffect(() => {
-    if (items.length === 0) {
+    if (isEmpty) {
       router.push("/cart");
     }
-  }, [items, router]);
+  }, [isEmpty, router]);
 
-  if (items.length === 0) return null;
+  useEffect(() => {
+    if (isEmpty) return;
+    let cancelled = false;
+
+    (async () => {
+      const result = await validateCartItemsStock(stockPayload);
+      if (cancelled) return;
+      setStockOk(result.ok);
+      if (!result.ok && !stockToastShown.current) {
+        toast.error("Stock insuficiente");
+        stockToastShown.current = true;
+      }
+      if (result.ok) stockToastShown.current = false;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEmpty, stockPayload]);
+
+  if (isEmpty) return null;
 
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subtotal * 0.15;
@@ -79,7 +109,13 @@ function CheckoutPage() {
               <CardTitle className="text-lg">Método de Pago</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <PayPalCheckout />
+              {stockOk ? (
+                <PayPalCheckout />
+              ) : (
+                <p className="text-sm text-destructive font-medium">
+                  Stock insuficiente
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

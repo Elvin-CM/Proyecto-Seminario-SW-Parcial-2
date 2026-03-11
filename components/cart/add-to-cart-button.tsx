@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { reserveStock, releaseReservation, getAvailableStockFromDB } from "@/lib/actions";
+import { reserveStock, releaseReservation, getAvailableStockFromDB, addToMyCart, removeFromMyCart } from "@/lib/actions";
+import { getCachedUserId } from "@/lib/client-auth";
+import { toast } from "react-hot-toast";
 
 interface AddToCartButtonProps {
   product: {
@@ -29,20 +31,21 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
   const updateItemMaxStock = useCartStore((state) => state.updateItemMaxStock); // NUEVO
+  const setItems = useCartStore((state) => state.setItems);
   const items = useCartStore((state) => state.items);
 
   const [quantity, setQuantity] = useState(1);
-  const [mounted, setMounted] = useState(false);
   const [realStock, setRealStock] = useState(product.stock);
+  const [isAdding, setIsAdding] = useState(false);
   const sessionId = useRef<string>("");
 
   useEffect(() => {
-    setMounted(true);
     sessionId.current = getSessionId();
   }, []);
 
   // Polling cada 10 segundos para sincronizar stock con BD
   useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
     const fetchStock = async () => {
       const data = await getAvailableStockFromDB(product.id);
       setRealStock(data.stock);
@@ -54,52 +57,116 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       }
     };
 
-    fetchStock();
-    const interval = setInterval(fetchStock, 10000);
-    return () => clearInterval(interval);
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (interval) clearInterval(interval);
+        interval = null;
+        return;
+      }
+      if (!interval) interval = setInterval(fetchStock, 20000);
+      fetchStock();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    onVisibility();
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (interval) clearInterval(interval);
+    };
   }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Stock disponible = stock BD - reservas activas de otros - lo que yo tengo en carrito
   const itemInCart = items.find((i) => i.id === product.id);
   const inMyCart = itemInCart ? itemInCart.quantity : 0;
-  const availableStock = realStock - inMyCart;
-  const isOutOfStock = mounted && availableStock <= 0 && inMyCart === 0;
+  // getAvailableStockFromDB() already accounts for the current session reservation.
+  // So "available to add" is just the returned stock.
+  const availableStock = realStock;
+  const isOutOfStock = availableStock <= 0 && inMyCart === 0;
 
   const decrease = () => setQuantity((q) => Math.max(1, q - 1));
   const increase = () => setQuantity((q) => Math.min(availableStock, q + 1));
 
   const handleAdd = async () => {
     if (quantity > availableStock) return;
+    if (isAdding) return;
 
-    // Reservar en BD
-    const result = await reserveStock(product.id, quantity + inMyCart, sessionId.current);
-    if (!result.success) {
-      alert("No hay suficiente stock disponible");
-      return;
+    setIsAdding(true);
+    const prevItems = items;
+    const prevStock = realStock;
+
+    try {
+      const userId = await getCachedUserId();
+
+      if (userId) {
+        // Optimistic UI update.
+        addItem({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity,
+          maxStock: realStock + inMyCart,
+        });
+        setRealStock((s) => Math.max(0, s - quantity));
+
+        const userResult = await addToMyCart(product.id, quantity);
+        if (!userResult.success) {
+          setItems(prevItems);
+          setRealStock(prevStock);
+          toast.error(userResult.error || "Stock insuficiente");
+          return;
+        }
+        setItems(userResult.items);
+        return;
+      }
+
+      const result = await reserveStock(product.id, quantity + inMyCart, sessionId.current);
+      if (!result.success) {
+        toast.error("Stock insuficiente");
+        return;
+      }
+
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity,
+        maxStock: realStock + inMyCart,
+      });
+
+      setRealStock((s) => Math.max(0, s - quantity));
+    } finally {
+      setIsAdding(false);
     }
 
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity,
-      maxStock: realStock + inMyCart, // CORREGIDO: stock real, no el estático de la página
-    });
-
     setQuantity(1);
-
-    // Actualizar stock mostrado
-    const data = await getAvailableStockFromDB(product.id);
-    setRealStock(data.stock);
   };
 
   const handleRemove = async () => {
-    await releaseReservation(product.id, sessionId.current);
-    removeItem(product.id);
+    const userId = await getCachedUserId();
 
-    const data = await getAvailableStockFromDB(product.id);
-    setRealStock(data.stock);
+    if (userId) {
+      const prevItems = items;
+      setItems(items.filter((i) => i.id !== product.id));
+
+      const userResult = await removeFromMyCart(product.id);
+      if (!userResult.success) {
+        setItems(prevItems);
+        toast.error(userResult.error || "No se pudo eliminar");
+        return;
+      }
+      setItems(userResult.items);
+      return;
+    }
+
+    try {
+      await releaseReservation(product.id, sessionId.current);
+      removeItem(product.id);
+      // Let polling reconcile exact stock; keep UI responsive.
+    } catch {
+      // no-op
+    }
   };
 
   if (isOutOfStock) {
@@ -115,7 +182,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       <p className="text-sm text-muted-foreground">
         Stock disponible:{" "}
         <span className="font-semibold text-foreground">
-          {mounted ? realStock : product.stock}
+          {realStock}
         </span>
       </p>
 
@@ -130,9 +197,9 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       </div>
 
       <div className="flex gap-2">
-        <Button size="lg" className="w-full md:w-auto text-lg px-8" onClick={handleAdd}>
+        <Button size="lg" className="w-full md:w-auto text-lg px-8" onClick={handleAdd} disabled={isAdding}>
           <ShoppingCart className="mr-2 h-5 w-5" />
-          {inMyCart > 0 ? "Agregar más" : "Agregar al Carrito"}
+          {isAdding ? "Agregando..." : inMyCart > 0 ? "Agregar más" : "Agregar al Carrito"}
         </Button>
         {inMyCart > 0 && (
           <Button size="lg" variant="outline" onClick={handleRemove}>

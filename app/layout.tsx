@@ -9,6 +9,7 @@ import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, ShoppingBag } from "
 import { CartWrapper } from "@/components/layout/cart-wrapper";
 import { UserButton } from "@/components/auth/user-button";
 import { GlobalEffects } from "@/components/GlobalEffects";
+import { CartSync } from "@/components/cart/cart-sync";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="es">
       <body className={inter.className}>
         <GlobalEffects />
+        <CartSync />
 
         <header className="border-b sticky top-0 bg-white z-50">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">

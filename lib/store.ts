@@ -14,6 +14,7 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[];
+  setItems: (items: CartItem[]) => void;
   addItem: (item: Omit<CartItem, "addedAt" | "expiresAt">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -25,12 +26,13 @@ interface CartState {
   getAvailableStock: (productId: string, realStock: number) => number;
 }
 
-const CART_EXPIRATION_TIME = 2 * 60 * 1000; // 15 min
+const CART_EXPIRATION_TIME = 15 * 60 * 1000; // 15 min
 
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      setItems: (items) => set({ items }),
 
       addItem: (newItem) => {
         const now = Date.now();
@@ -86,7 +88,11 @@ export const useCartStore = create<CartState>()(
         set({
           items: get().items.map((item) =>
             item.id === id
-              ? { ...item, quantity: quantity, expiresAt: expiration }
+              ? {
+                  ...item,
+                  quantity: Math.max(1, Math.min(quantity, item.maxStock)),
+                  expiresAt: expiration,
+                }
               : item
           ),
         });

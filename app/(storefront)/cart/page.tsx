@@ -9,10 +9,39 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import dynamic from "next/dynamic"; 
+import { useEffect, useMemo, useRef, useState } from "react";
+import { validateCartItemsStock } from "@/lib/actions";
+import { toast } from "react-hot-toast";
 
 
 function CartPage() {
   const items = useCartStore((state) => state.items);
+  const [stockOk, setStockOk] = useState(true);
+  const stockToastShown = useRef(false);
+
+  const stockPayload = useMemo(
+    () => items.map((i) => ({ id: i.id, quantity: i.quantity })),
+    [items]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const result = await validateCartItemsStock(stockPayload);
+      if (cancelled) return;
+      setStockOk(result.ok);
+      if (!result.ok && !stockToastShown.current) {
+        toast.error("Stock insuficiente");
+        stockToastShown.current = true;
+      }
+      if (result.ok) stockToastShown.current = false;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [stockPayload]);
 
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subtotal * 0.15; 
@@ -78,12 +107,18 @@ function CartPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" size="lg" asChild>
-                <Link href="/checkout">
+              {stockOk ? (
+                <Button className="w-full" size="lg" asChild>
+                  <Link href="/checkout">
+                    Proceder al Pago
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button className="w-full" size="lg" disabled>
                   Proceder al Pago
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+                </Button>
+              )}
             </CardFooter>
           </Card>
         </div>

@@ -4,6 +4,8 @@ import { SearchFilters } from "@/components/catalog/search-filters";
 import { PackageOpen } from "lucide-react";
 import { Prisma } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 interface SearchParams {
   q?: string;
   cat?: string;
@@ -50,6 +52,28 @@ async function getProducts(params: SearchParams) {
   });
 }
 
+async function getReservationsMap(productIds: string[]) {
+  const now = new Date();
+
+  await prisma.stockReservation.deleteMany({
+    where: { expiresAt: { lt: now } },
+  });
+
+  if (productIds.length === 0) return new Map<string, number>();
+
+  const reservations = await prisma.stockReservation.groupBy({
+    by: ["productId"],
+    where: { productId: { in: productIds }, expiresAt: { gt: now } },
+    _sum: { quantity: true },
+  });
+
+  const map = new Map<string, number>();
+  for (const r of reservations) {
+    map.set(r.productId, r._sum.quantity ?? 0);
+  }
+  return map;
+}
+
 export default async function CatalogPage({
   searchParams,
 }: {
@@ -57,16 +81,20 @@ export default async function CatalogPage({
 }) {
   const params = await searchParams;
   
-  const [products, categories] = await Promise.all([
-    getProducts(params),
-    getCategories(),
-  ]);
+  const [products, categories] = await Promise.all([getProducts(params), getCategories()]);
+  const reservationMap = await getReservationsMap(products.map((p) => p.id));
+
+  // Stock disponible real = stock - reservas activas
+  const productsWithAvailableStock = products.map((product) => {
+    const reserved = reservationMap.get(product.id) ?? 0;
+    return { ...product, stock: Math.max(0, product.stock - reserved) };
+  });
 
   // Filter products with stock on client side if needed (for real-time stock)
   const showInStock = params.inStock === "true";
-  const filteredProducts = showInStock 
-    ? products.filter(p => p.stock > 0)
-    : products;
+  const filteredProducts = showInStock
+    ? productsWithAvailableStock.filter((p) => p.stock > 0)
+    : productsWithAvailableStock;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -98,7 +126,7 @@ export default async function CatalogPage({
               </div>
               <h3 className="text-lg font-semibold">No se encontraron productos</h3>
               <p className="text-muted-foreground max-w-sm mt-2">
-                No pudimos encontrar nada que coincida con "{params.q}" 
+                No pudimos encontrar nada que coincida con &quot;{params.q}&quot;
                 {params.cat ? ` en ${params.cat}` : ""}
                 {params.inStock ? " con stock disponible" : ""}.
               </p>

@@ -1,5 +1,6 @@
 import { register } from "@/lib/actions";
 import Link from "next/link";
+import { RegisterToasts } from "@/components/auth/auth-toasts";
 
 export default function RegisterPage({
   searchParams,
@@ -10,12 +11,7 @@ export default function RegisterPage({
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-bold text-center">Crear Cuenta</h1>
-
-        {searchParams.error === "exists" && (
-          <p className="text-red-500 text-sm text-center">
-            El email ya está registrado
-          </p>
-        )}
+        <RegisterToasts error={searchParams.error} />
 
         <form action={register} className="space-y-4">
           <input

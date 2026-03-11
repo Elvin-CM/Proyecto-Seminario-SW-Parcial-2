@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "react-hot-toast";
-import { releaseReservation, getAvailableStockFromDB } from "@/lib/actions"; // NUEVO: importar getAvailableStockFromDB
+import { releaseReservation, getAvailableStockFromDB, reserveStock, setMyCartQuantity, removeFromMyCart } from "@/lib/actions";
+import { getCachedUserId } from "@/lib/client-auth";
 
 interface CartItemProps {
   item: CartItemType;
@@ -26,12 +27,15 @@ export function CartItem({ item }: CartItemProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const updateItemMaxStock = useCartStore((state) => state.updateItemMaxStock); // NUEVO
+  const setItems = useCartStore((state) => state.setItems);
 
   const [remainingTime, setRemainingTime] = useState(0);
   const [realStock, setRealStock] = useState<number | null>(null); // NUEVO: stock real desde BD
 
   // NUEVO: cargar stock real al montar y cada 15 segundos
   useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     const fetchStock = async () => {
       const data = await getAvailableStockFromDB(item.id);
       // stock disponible en BD + lo que yo tengo = total que podría tener
@@ -40,9 +44,23 @@ export function CartItem({ item }: CartItemProps) {
       updateItemMaxStock(item.id, totalForMe);
     };
 
-    fetchStock();
-    const interval = setInterval(fetchStock, 15000);
-    return () => clearInterval(interval);
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (interval) clearInterval(interval);
+        interval = null;
+        return;
+      }
+      if (!interval) interval = setInterval(fetchStock, 30000);
+      fetchStock();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    onVisibility();
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (interval) clearInterval(interval);
+    };
   }, [item.id, item.quantity, updateItemMaxStock]);
 
   useEffect(() => {
@@ -56,19 +74,67 @@ export function CartItem({ item }: CartItemProps) {
     return () => clearInterval(interval);
   }, [item.expiresAt]);
 
-  const handleIncrement = () => {
-    if (item.quantity < item.maxStock) {
-      updateQuantity(item.id, item.quantity + 1);
+  const handleIncrement = async () => {
+    if (item.quantity >= item.maxStock) return;
+
+    const userId = await getCachedUserId();
+    if (userId) {
+      const userResult = await setMyCartQuantity(item.id, item.quantity + 1);
+      if (!userResult.success) {
+        toast.error(userResult.error || "Stock insuficiente");
+        return;
+      }
+      setItems(userResult.items);
+      return;
     }
+
+    const sessionId = getSessionId();
+    const guestReserve = await reserveStock(item.id, item.quantity + 1, sessionId);
+    if (!guestReserve.success) {
+      toast.error(guestReserve.error || "Stock insuficiente");
+      return;
+    }
+
+    updateQuantity(item.id, item.quantity + 1);
   };
 
-  const handleDecrement = () => {
-    if (item.quantity > 1) {
-      updateQuantity(item.id, item.quantity - 1);
+  const handleDecrement = async () => {
+    if (item.quantity <= 1) return;
+
+    const userId = await getCachedUserId();
+    if (userId) {
+      const userResult = await setMyCartQuantity(item.id, item.quantity - 1);
+      if (!userResult.success) {
+        toast.error(userResult.error || "Error al actualizar cantidad");
+        return;
+      }
+      setItems(userResult.items);
+      return;
     }
+
+    const sessionId = getSessionId();
+    const guestReserve = await reserveStock(item.id, item.quantity - 1, sessionId);
+    if (!guestReserve.success) {
+      toast.error(guestReserve.error || "Error al actualizar cantidad");
+      return;
+    }
+
+    updateQuantity(item.id, item.quantity - 1);
   };
 
   const handleRemove = async () => {
+    const userId = await getCachedUserId();
+    if (userId) {
+      const userResult = await removeFromMyCart(item.id);
+      if (!userResult.success) {
+        toast.error(userResult.error || "Error al eliminar del carrito");
+        return;
+      }
+      setItems(userResult.items);
+      toast.success(`${item.name} eliminado del carrito.`);
+      return;
+    }
+
     const sessionId = getSessionId();
     await releaseReservation(item.id, sessionId);
     removeItem(item.id);
