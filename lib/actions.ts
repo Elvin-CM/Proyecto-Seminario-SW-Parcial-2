@@ -7,6 +7,7 @@ import { signIn, signOut, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 const CART_EXPIRATION_MS = 15 * 60 * 1000;
 
@@ -186,6 +187,23 @@ export async function loginWithGoogle(): Promise<void> {
   await signIn("google", { redirectTo: "/" });
 }
 
+export async function registerWithGoogle(): Promise<void> {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    redirect("/auth/register?error=google_not_configured");
+  }
+
+  // Mark this OAuth flow as a "register intent" so existing users get a friendly message.
+  const cookieStore = await cookies();
+  cookieStore.set("auth_intent", "register", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 5 * 60,
+  });
+
+  await signIn("google", { redirectTo: "/" });
+}
+
 export async function logout(): Promise<void> {
   await signOut({ redirectTo: "/" });
 }
@@ -218,11 +236,16 @@ function mapDbCartItemToStoreItem(dbItem: {
 }
 
 export async function getMyCart() {
+  type MyCartResult =
+    | { authenticated: false; userId: null; items: CartItem[] }
+    | { authenticated: true; userId: string; items: CartItem[] };
+
   const session = await auth();
   const userId = session?.user?.id;
 
   if (!userId) {
-    return { authenticated: false as const, userId: null as const, items: [] as CartItem[] };
+    const result: MyCartResult = { authenticated: false, userId: null, items: [] };
+    return result;
   }
 
   // Fallback: if Cart models are not present in the generated Prisma client,
@@ -253,13 +276,17 @@ export async function getMyCart() {
       expiresAt: r.expiresAt.getTime(),
     }));
 
-    return { authenticated: true as const, userId, items };
+    const result: MyCartResult = { authenticated: true, userId, items };
+    return result;
   }
 
   const now = new Date();
 
   const cart = await prisma.cart.findUnique({ where: { userId }, select: { id: true } });
-  if (!cart) return { authenticated: true as const, userId, items: [] as CartItem[] };
+  if (!cart) {
+    const result: MyCartResult = { authenticated: true, userId, items: [] };
+    return result;
+  }
 
   // Remove expired entries so cart doesn't resurrect stale items.
   await prisma.cartEntry.deleteMany({ where: { cartId: cart.id, expiresAt: { lt: now } } });
@@ -277,7 +304,8 @@ export async function getMyCart() {
   });
 
   const items = (cartWithItems?.items ?? []).map(mapDbCartItemToStoreItem);
-  return { authenticated: true as const, userId, items };
+  const result: MyCartResult = { authenticated: true, userId, items };
+  return result;
 }
 
 async function mutateUserCartItem(params: {

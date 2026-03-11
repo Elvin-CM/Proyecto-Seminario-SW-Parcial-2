@@ -155,18 +155,24 @@ export default function LandingPage() {
               { name: "Moda", image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&h=400&fit=crop", count: "5,000+ productos" },
               { name: "Hogar", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=600&h=400&fit=crop", count: "1,800+ productos" },
             ].map((cat, idx) => (
-              <div key={idx} className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer">
-                <img 
-                  src={cat.image} 
+              <Link
+                key={idx}
+                href={`/catalog?cat=${encodeURIComponent(cat.name)}`}
+                className="group relative overflow-hidden rounded-2xl md:rounded-3xl block"
+              >
+                <img
+                  src={cat.image}
                   alt={cat.name}
                   className="w-full h-56 md:h-80 object-cover transform group-hover:scale-110 transition duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2">{cat.name}</h3>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2">
+                    {cat.name}
+                  </h3>
                   <p className="text-white/80 text-sm md:text-base">{cat.count}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -207,8 +213,10 @@ export default function LandingPage() {
                     <span className="text-xl md:text-2xl font-bold text-black">{product.price}</span>
                     <span className="text-gray-400 line-through text-sm md:text-base">{product.oldPrice}</span>
                   </div>
-                  <Button className="w-full mt-3 md:mt-4 bg-black hover:bg-gray-800 text-sm md:text-base">
-                    Agregar al Carrito
+                  <Button asChild className="w-full mt-3 md:mt-4 bg-black hover:bg-gray-800 text-sm md:text-base">
+                    <Link href={`/catalog?q=${encodeURIComponent(product.name)}`}>
+                      Explorar Productos
+                    </Link>
                   </Button>
                 </div>
               </div>
