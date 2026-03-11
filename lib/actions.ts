@@ -181,11 +181,9 @@ export async function loginWithGoogle(): Promise<void> {
     redirect("/auth/login?error=google_not_configured");
   }
 
-  try {
-    await signIn("google", { redirectTo: "/" });
-  } catch {
-    redirect("/auth/login?error=google");
-  }
+  // Important: signIn() for OAuth triggers a redirect by throwing internally.
+  // Do not catch here, or you will treat the redirect as an error.
+  await signIn("google", { redirectTo: "/" });
 }
 
 export async function logout(): Promise<void> {

@@ -6,7 +6,11 @@ import { toast } from "react-hot-toast";
 function loginErrorMessage(code: string) {
   if (code === "missing") return "Completa tu email y contrasena";
   if (code === "google_not_configured") return "Google no esta configurado";
-  if (code === "google") return "No se pudo iniciar sesion con Google";
+  if (code.toLowerCase().includes("oauth")) return "No se pudo iniciar sesion con Google";
+  if (code === "CallbackRouteError") return "No se pudo iniciar sesion con Google";
+  if (code === "Configuration") return "Google no esta configurado";
+  if (code === "AccessDenied") return "Acceso denegado";
+  if (code === "AccountNotLinked") return "Cuenta no vinculada";
   return "Credenciales invalidas";
 }
 
