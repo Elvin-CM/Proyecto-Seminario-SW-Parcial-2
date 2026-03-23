@@ -6,6 +6,24 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { AdapterAccount } from "@auth/core/adapters";
 import { cookies } from "next/headers";
+import type { UserRole } from "@prisma/client";
+
+function getConfiguredAdminEmails() {
+    return new Set(
+        (process.env.ADMIN_EMAILS ?? "")
+            .split(",")
+            .map((email) => email.trim().toLowerCase())
+            .filter(Boolean)
+    );
+}
+
+function resolveRole(role: UserRole, email?: string | null): UserRole {
+    const adminEmails = getConfiguredAdminEmails();
+    if (email && adminEmails.has(email.toLowerCase())) {
+        return "ADMIN";
+    }
+    return role;
+}
 
 function sanitizeAccountForPrisma(data: AdapterAccount): AdapterAccount {
     // Our Prisma schema does not include all optional OAuth fields that Auth.js may provide.
@@ -60,7 +78,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     user.password
                 );
 
-                return valid ? { id: user.id, email: user.email, name: user.name } : null;
+                return valid
+                    ? { id: user.id, email: user.email, name: user.name, role: user.role }
+                    : null;
             },
         }),
     ],
@@ -90,13 +110,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return true;
         },
 
-        jwt({ token, user }) {
-            if (user) token.id = user.id;
+        async jwt({ token, user }) {
+            if (user) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: user.id! },
+                    select: { role: true, email: true },
+                });
+                token.id = user.id!;
+                token.role = resolveRole(
+                    (user as { role?: UserRole }).role ??
+                    dbUser?.role ??
+                    "CUSTOMER",
+                    user.email ?? dbUser?.email
+                );
+            }
             return token;
         },
 
         session({ session, token }) {
-            if (session.user) session.user.id = token.id as string;
+            if (session.user) {
+                session.user.id = token.id as string;
+                session.user.role = (token.role as UserRole | undefined) ?? "CUSTOMER";
+            }
             return session;
         },
     }

@@ -2,12 +2,14 @@
 
 import { prisma } from "@/lib/prisma";
 import { CartItem } from "@/lib/store";
-import { Prisma } from "@prisma/client";
+import { DeliveryStatus, Prisma } from "@prisma/client";
 import { signIn, signOut, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { sendDeliveryStatusEmail, sendOrderConfirmationEmail } from "@/lib/order-email";
 
 const CART_EXPIRATION_MS = 15 * 60 * 1000;
 
@@ -21,6 +23,54 @@ function hasCartTablesInClient() {
     typeof p.cart?.upsert === "function" &&
     typeof p.cartEntry?.upsert === "function"
   );
+}
+
+async function getOrderEmailPayload(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      user: {
+        select: {
+          name: true,
+        },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+function revalidateOrderPaths(orderId: string) {
+  revalidatePath(`/track/${orderId}`);
+  revalidatePath("/orders");
+  revalidatePath("/admin/orders");
+}
+
+async function requireAuthenticatedUser() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/auth/login");
+  }
+
+  return session;
+}
+
+async function requireAdminUser() {
+  const session = await requireAuthenticatedUser();
+
+  if (session.user.role !== "ADMIN") {
+    throw new Error("No autorizado");
+  }
+
+  return session;
 }
 
 // ========== ORDER ACTIONS ==========
@@ -71,6 +121,7 @@ export async function createOrder(
           customerEmail,
           totalAmount: new Prisma.Decimal(calculatedTotal),
           status: "PAID",
+          deliveryStatus: "PENDING",
           userId,
           items: {
             create: orderItemsData,
@@ -80,6 +131,17 @@ export async function createOrder(
 
       return newOrder;
     });
+
+    const orderForEmail = await getOrderEmailPayload(order.id);
+    if (orderForEmail) {
+      try {
+        await sendOrderConfirmationEmail(orderForEmail);
+      } catch (emailError) {
+        console.error("Order email failed:", emailError);
+      }
+    }
+
+    revalidateOrderPaths(order.id);
 
     return { success: true, orderId: order.id };
   } catch (error) {
@@ -171,6 +233,7 @@ export async function register(formData: FormData): Promise<void> {
       email,
       name,
       password: await bcrypt.hash(password, 10),
+      role: "CUSTOMER",
     },
   });
 
@@ -653,4 +716,116 @@ export async function getAvailableStockFromDB(productId: string) {
   } catch {
     return { stock: 0 };
   }
+}
+
+export async function updateOrderDeliveryStatus(formData: FormData) {
+  const orderId = formData.get("orderId");
+  const requestedStatus = formData.get("deliveryStatus");
+
+  if (typeof orderId !== "string" || typeof requestedStatus !== "string") {
+    throw new Error("Solicitud inválida");
+  }
+
+  await requireAdminUser();
+
+  if (!["PACKAGING", "SHIPPED"].includes(requestedStatus)) {
+    throw new Error("Estado de entrega inválido");
+  }
+
+  const currentOrder = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      packagedAt: true,
+      shippedAt: true,
+    },
+  });
+
+  if (!currentOrder) {
+    throw new Error("Pedido no encontrado");
+  }
+
+  const nextStatus = requestedStatus as DeliveryStatus;
+  const now = new Date();
+  const data: {
+    deliveryStatus: DeliveryStatus;
+    packagedAt?: Date;
+    shippedAt?: Date;
+  } = {
+    deliveryStatus: nextStatus,
+  };
+
+  if (nextStatus === "PACKAGING") {
+    data.packagedAt = currentOrder.packagedAt ?? now;
+  }
+
+  if (nextStatus === "SHIPPED") {
+    data.packagedAt = currentOrder.packagedAt ?? now;
+    data.shippedAt = currentOrder.shippedAt ?? now;
+  }
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data,
+  });
+
+  const orderForEmail = await getOrderEmailPayload(orderId);
+  if (orderForEmail) {
+    try {
+      await sendDeliveryStatusEmail(orderForEmail);
+    } catch (emailError) {
+      console.error("Delivery status email failed:", emailError);
+    }
+  }
+
+  revalidateOrderPaths(orderId);
+}
+
+export async function confirmOrderReceived(formData: FormData) {
+  const orderId = formData.get("orderId");
+
+  if (typeof orderId !== "string") {
+    throw new Error("Solicitud inválida");
+  }
+
+  const session = await requireAuthenticatedUser();
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      userId: true,
+      deliveryStatus: true,
+      receivedAt: true,
+    },
+  });
+
+  if (!order) {
+    throw new Error("Pedido no encontrado");
+  }
+
+  if (order.userId !== session.user.id) {
+    throw new Error("No autorizado");
+  }
+
+  if (order.deliveryStatus !== "SHIPPED") {
+    throw new Error("El pedido aún no está listo para confirmación");
+  }
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      deliveryStatus: "RECEIVED",
+      receivedAt: order.receivedAt ?? new Date(),
+    },
+  });
+
+  const orderForEmail = await getOrderEmailPayload(orderId);
+  if (orderForEmail) {
+    try {
+      await sendDeliveryStatusEmail(orderForEmail);
+    } catch (emailError) {
+      console.error("Received confirmation email failed:", emailError);
+    }
+  }
+
+  revalidateOrderPaths(orderId);
 }

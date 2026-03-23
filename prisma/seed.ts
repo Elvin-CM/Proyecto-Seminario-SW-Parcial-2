@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -8,10 +9,32 @@ async function main() {
   // 1. CLEANUP: Delete everything to start fresh
   // Order matters! We must delete children before parents.
   console.log('🧹 Limpiando datos antiguos...')
+  await prisma.cartEntry.deleteMany()
+  await prisma.cart.deleteMany()
+  await prisma.stockReservation.deleteMany()
   await prisma.orderItem.deleteMany()
   await prisma.order.deleteMany()
+  await prisma.account.deleteMany()
   await prisma.product.deleteMany()
   await prisma.category.deleteMany()
+
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@prototypestore.com'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: 'Administrador',
+      role: 'ADMIN',
+      password: await bcrypt.hash(adminPassword, 10),
+    },
+    create: {
+      email: adminEmail,
+      name: 'Administrador',
+      role: 'ADMIN',
+      password: await bcrypt.hash(adminPassword, 10),
+    },
+  })
 
   // 2. Create Categories
   console.log('📁 Creando categorías...')
@@ -220,6 +243,7 @@ async function main() {
     })
   }
 
+  console.log(`🔐 Admin listo: ${adminEmail} / ${adminPassword}`)
   console.log('✅ Base de datos sembrada con éxito!')
 }
 

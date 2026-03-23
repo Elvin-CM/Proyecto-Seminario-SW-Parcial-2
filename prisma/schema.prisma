@@ -8,11 +8,17 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
 model User {
   id        String    @id @default(cuid())
   email     String    @unique
   name      String?
   password  String?
+  role      UserRole  @default(CUSTOMER)
   createdAt DateTime  @default(now())
 
   orders   Order[]
@@ -64,14 +70,25 @@ enum OrderStatus {
   FAILED
 }
 
+enum DeliveryStatus {
+  PENDING
+  PACKAGING
+  SHIPPED
+  RECEIVED
+}
+
 model Order {
-  id            String      @id @default(cuid())
-  paypalOrderId String?     @unique
-  customerEmail String
-  totalAmount   Decimal     @db.Decimal(10, 2)
-  status        OrderStatus @default(PENDING)
-  createdAt     DateTime    @default(now())
-  userId        String?
+  id             String         @id @default(cuid())
+  paypalOrderId  String?        @unique
+  customerEmail  String
+  totalAmount    Decimal        @db.Decimal(10, 2)
+  status         OrderStatus    @default(PENDING)
+  deliveryStatus DeliveryStatus @default(PENDING)
+  packagedAt     DateTime?
+  shippedAt      DateTime?
+  receivedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  userId         String?
 
   user  User?       @relation(fields: [userId], references: [id])
   items OrderItem[]

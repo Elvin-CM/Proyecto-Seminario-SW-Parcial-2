@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
-import { ShoppingCart, PackageX, AlertTriangle } from "lucide-react";
+import { PackageX, AlertTriangle } from "lucide-react";
 import { Metadata } from "next";
 
 export const dynamic = "force-dynamic";

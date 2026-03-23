@@ -78,7 +78,7 @@ export default function RootLayout({
                   <li><Link href="/orders" className="hover:text-white transition-colors">Mis Pedidos</Link></li>
                   <li><Link href="/cart" className="hover:text-white transition-colors">Carrito</Link></li>
                   <li><Link href="/checkout" className="hover:text-white transition-colors">Checkout</Link></li>
-                  <li><Link href="/track" className="hover:text-white transition-colors">Rastrear Pedido</Link></li>
+                  <li><Link href="/admin/orders" className="hover:text-white transition-colors">Panel Admin</Link></li>
                 </ul>
               </div>
 

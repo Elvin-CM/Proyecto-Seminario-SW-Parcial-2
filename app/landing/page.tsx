@@ -282,7 +282,7 @@ export default function LandingPage() {
                     <Star key={i} className="h-4 w-4 md:h-5 md:w-5 fill-gray-600 text-gray-600" />
                   ))}
                 </div>
-                <p className="text-gray-600 mb-4 md:mb-6 leading-relaxed text-sm md:text-base">"{testimonial.text}"</p>
+                <p className="text-gray-600 mb-4 md:mb-6 leading-relaxed text-sm md:text-base">&ldquo;{testimonial.text}&rdquo;</p>
                 <div className="flex items-center gap-3 md:gap-4">
                   <img src={testimonial.image} alt={testimonial.name} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover" />
                   <div>
