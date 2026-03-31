@@ -1,5 +1,4 @@
 import type { DeliveryStatus, Prisma } from "@prisma/client";
-
 type OrderForEmail = {
   id: string;
   customerEmail: string;
@@ -47,33 +46,28 @@ async function sendEmail(params: {
   html: string;
   text: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.ORDER_FROM_EMAIL || "Prototype Store <onboarding@resend.dev>";
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
 
-  if (!apiKey) {
-    console.warn("Correo omitido: falta RESEND_API_KEY");
+  if (!user || !pass) {
+    console.warn("Correo omitido: falta EMAIL_USER o EMAIL_PASS");
     return { sent: false, skipped: true as const };
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-      text: params.text,
-    }),
+  const nodemailer = await import("nodemailer");
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`No se pudo enviar el correo: ${response.status} ${errorBody}`);
-  }
+  await transporter.sendMail({
+    from: `"PrototypeStore" <${user}>`,
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+    text: params.text,
+  });
 
   return { sent: true as const, skipped: false as const };
 }

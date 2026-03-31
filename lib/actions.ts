@@ -1,5 +1,4 @@
 "use server";
-
 import { prisma } from "@/lib/prisma";
 import { CartItem } from "@/lib/store";
 import { DeliveryStatus, Prisma } from "@prisma/client";
@@ -116,18 +115,18 @@ export async function createOrder(
       }
 
       const newOrder = await tx.order.create({
-        data: {
-          paypalOrderId,
-          customerEmail,
-          totalAmount: new Prisma.Decimal(calculatedTotal),
-          status: "PAID",
-          deliveryStatus: "PENDING",
-          userId,
-          items: {
-            create: orderItemsData,
-          },
-        },
-      });
+  data: {
+    paypalOrderId,
+    customerEmail: session?.user?.email ?? customerEmail, // 
+    totalAmount: new Prisma.Decimal(calculatedTotal),
+    status: "PAID",
+    deliveryStatus: "PENDING",
+    userId,
+    items: {
+      create: orderItemsData,
+    },
+  },
+});
 
       return newOrder;
     });
