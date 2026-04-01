@@ -26,7 +26,7 @@ interface CartState {
   getAvailableStock: (productId: string, realStock: number) => number;
 }
 
-const CART_EXPIRATION_TIME = 15 * 60 * 1000; // 15 min
+const CART_EXPIRATION_TIME = 15 * 60 * 1000; // 15 min para limpiar el carrito
 
 export const useCartStore = create<CartState>()(
   persist(

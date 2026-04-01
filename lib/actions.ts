@@ -1,8 +1,10 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { CartItem } from "@/lib/store";
-import { DeliveryStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { signIn, signOut, auth } from "@/lib/auth";
+
+type DeliveryStatus = "PENDING" | "PACKAGING" | "SHIPPED" | "RECEIVED";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
@@ -224,15 +226,27 @@ export async function register(formData: FormData): Promise<void> {
   const exists = await prisma.user.findUnique({ where: { email } });
 
   if (exists) {
+    if (exists.role !== "ADMIN" && email === (process.env.ADMIN_EMAIL || "admin@prototypestore.com")) {
+      await prisma.user.update({
+        where: { email },
+        data: { role: "ADMIN", password: await bcrypt.hash(password, 10), name },
+      });
+      redirect("/auth/login?success=registered");
+      return;
+    }
+
     redirect("/auth/register?error=exists");
   }
+
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@prototypestore.com";
+  const role = email.toLowerCase() === adminEmail.toLowerCase() ? "ADMIN" : "CUSTOMER";
 
   await prisma.user.create({
     data: {
       email,
       name,
       password: await bcrypt.hash(password, 10),
-      role: "CUSTOMER",
+      role,
     },
   });
 

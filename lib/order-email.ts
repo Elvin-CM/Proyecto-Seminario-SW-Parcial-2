@@ -1,4 +1,5 @@
-import type { DeliveryStatus, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type DeliveryStatus = "PENDING" | "PACKAGING" | "SHIPPED" | "RECEIVED";
 type OrderForEmail = {
   id: string;
   customerEmail: string;
