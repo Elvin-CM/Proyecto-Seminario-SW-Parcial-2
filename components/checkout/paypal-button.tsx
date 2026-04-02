@@ -4,7 +4,7 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useCartStore } from "@/lib/store";
 import { clearMyCart, createOrder, releaseReservation, validateCartItemsStock } from "@/lib/actions";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export function PayPalCheckout() {
@@ -28,27 +28,47 @@ export function PayPalCheckout() {
   const finalAmount = (totalAmount * 1.15).toFixed(2);
 
   const initialOptions = {
-    clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+    clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R", // Fallback test client ID
     currency: "USD",
     intent: "capture",
   };
 
-  return (
-    <PayPalScriptProvider options={initialOptions}>
-      <div className="relative z-0">
-        
-        {/* 
-           FIX: The Spinner is now an OVERLAY. 
-           The PayPal buttons remain in the DOM underneath, preventing the crash.
-        */}
-        {isProcessing && (
-          <div className="absolute inset-0 bg-white/80 z-50 flex flex-col items-center justify-center border rounded-lg backdrop-blur-sm">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <p className="text-sm font-medium text-primary">Procesando...</p>
-          </div>
-        )}
+  // Check if PayPal client ID is configured
+  if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-red-800">Error de PayPal</p>
+          <p className="text-red-700 mt-1">PayPal Client ID no configurado</p>
+          <p className="text-red-600 mt-2 text-xs">
+            Verifica que el CLIENT_ID de PayPal esté configurado correctamente en las variables de entorno.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-        <PayPalButtons
+  return (
+    <div className="space-y-4">
+      <PayPalScriptProvider
+        options={initialOptions}
+        deferLoading={false}
+      >
+        <div className="relative z-0">
+          
+          {/* 
+             FIX: The Spinner is now an OVERLAY. 
+             The PayPal buttons remain in the DOM underneath, preventing the crash.
+          */}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-white/80 z-50 flex flex-col items-center justify-center border rounded-lg backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+              <p className="text-sm font-medium text-primary">Procesando...</p>
+            </div>
+          )}
+
+          <PayPalButtons
           className={isProcessing ? "opacity-50 pointer-events-none" : ""}
           style={{ layout: "vertical", shape: "rect" }}
           createOrder={(data, actions) => {
@@ -116,7 +136,8 @@ export function PayPalCheckout() {
             toast.error("Error de conexion con PayPal");
           }}
         />
-      </div>
-    </PayPalScriptProvider>
+        </div>
+      </PayPalScriptProvider>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 import { getDeliveryStatusDescription, getDeliveryStatusLabel, getPaymentStatusLabel } from "@/lib/order-display";
 import { updateOrderDeliveryStatus } from "@/lib/actions";
@@ -8,11 +9,20 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Truck, PackageCheck } from "lucide-react";
+import { ShieldCheck, Truck, PackageCheck, Package } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage() {
+type AdminOrderStatus = "PENDING" | "PACKAGING" | "SHIPPED" | "RECEIVED";
+
+interface AdminOrdersPageProps {
+  searchParams: Promise<{
+    customer?: string;
+    status?: AdminOrderStatus;
+  }>;
+}
+
+export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -23,7 +33,38 @@ export default async function AdminOrdersPage() {
     redirect("/");
   }
 
+  const params = await searchParams;
+  const customerFilter = params.customer?.trim() ?? "";
+  const statusFilter = params.status;
+
+  const where: Prisma.OrderWhereInput = {};
+
+  // Construir filtros de manera que funcionen correctamente juntos
+  const filters: Prisma.OrderWhereInput[] = [];
+
+  if (customerFilter) {
+    filters.push({
+      OR: [
+        { customerEmail: { contains: customerFilter, mode: "insensitive" } },
+        { user: { name: { contains: customerFilter, mode: "insensitive" } } },
+        { user: { email: { contains: customerFilter, mode: "insensitive" } } },
+      ],
+    });
+  }
+
+  if (statusFilter && ["PENDING", "PACKAGING", "SHIPPED", "RECEIVED"].includes(statusFilter)) {
+    filters.push({
+      deliveryStatus: statusFilter,
+    });
+  }
+
+  // Si hay múltiples filtros, combinarlos con AND
+  if (filters.length > 0) {
+    where.AND = filters;
+  }
+
   const orders = await prisma.order.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -62,6 +103,49 @@ export default async function AdminOrdersPage() {
             Consulta pedidos, compradores y avanza manualmente las entregas.
           </p>
         </div>
+        <form action="/admin/orders" className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex flex-col">
+              <label htmlFor="customer" className="text-sm font-medium text-gray-700 mb-1">
+                Buscar cliente
+              </label>
+              <input
+                id="customer"
+                name="customer"
+                defaultValue={customerFilter}
+                placeholder="Nombre o email del cliente"
+                className="border rounded-lg px-3 py-2 min-w-[200px]"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="status" className="text-sm font-medium text-gray-700 mb-1">
+                Estado del pedido
+              </label>
+              <select
+                id="status"
+                name="status"
+                defaultValue={statusFilter ?? ""}
+                className="border rounded-lg px-3 py-2 min-w-[180px]"
+              >
+                <option value="">Todos los estados</option>
+                <option value="PENDING">⏳ Pendiente</option>
+                <option value="PACKAGING">📦 Empaquetado</option>
+                <option value="SHIPPED">🚚 Envío manual</option>
+                <option value="RECEIVED">✅ Pedido recibido</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              🔍 Filtrar
+            </button>
+            {(customerFilter || statusFilter) && (
+              <a href="/admin/orders" className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                🗑️ Limpiar
+              </a>
+            )}
+          </div>
+        </form>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Card>
@@ -86,6 +170,47 @@ export default async function AdminOrdersPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Indicador de filtros aplicados */}
+        {(customerFilter || statusFilter) && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm font-medium text-blue-800">Filtros aplicados:</span>
+                {customerFilter && (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                    👤 Cliente: {customerFilter}
+                  </span>
+                )}
+                {statusFilter && (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                    📊 Estado: {
+                      statusFilter === "PENDING" ? "Pendiente" :
+                      statusFilter === "PACKAGING" ? "Empaquetado" :
+                      statusFilter === "SHIPPED" ? "Envío manual" :
+                      statusFilter === "RECEIVED" ? "Pedido recibido" : statusFilter
+                    }
+                  </span>
+                )}
+              </div>
+              <span className="text-sm text-blue-700">
+                {orders.length} resultado{orders.length !== 1 ? 's' : ''} encontrado{orders.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {orders.length === 0 && (customerFilter || statusFilter) && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No se encontraron pedidos</h3>
+              <p className="text-muted-foreground">
+                Intenta ajustar los filtros para ver más resultados.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {orders.map((order) => (
           <Card key={order.id}>
             <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

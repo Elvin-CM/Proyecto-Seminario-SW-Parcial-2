@@ -1,4 +1,6 @@
-import type { DeliveryStatus, OrderStatus } from "@prisma/client";
+import type { OrderStatus } from "@prisma/client";
+
+type DeliveryStatus = "PENDING" | "PACKAGING" | "SHIPPED" | "RECEIVED";
 
 export function getPaymentStatusLabel(status: OrderStatus) {
   switch (status) {
