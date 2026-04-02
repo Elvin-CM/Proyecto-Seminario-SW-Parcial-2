@@ -1,0 +1,49 @@
+﻿
+> ecommerce-prototypee@0.1.0 lint
+> eslint
+
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\admin\layout.tsx
+  4:10  warning  'ShieldCheck' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\admin\productos\components\delete-dialog.tsx
+   8:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\admin\productos\components\inventory-manager.tsx
+  15:64  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  16:44  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  26:56  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  29:58  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  45:14  warning  'error' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  58:6   warning  React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  65:32  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  70:34  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\admin\productos\components\product-form-modal.tsx
+    9:87  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   73:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\api\productos\[id]\route.ts
+  11:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\api\productos\route.ts
+  14:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  49:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\carfl\Desktop\Seminario\Proyecto-Seminario-SW-Parcial-2\app\landing\page.tsx
+   72:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+   80:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+   90:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+   98:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  163:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  201:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  287:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+Ô£û 28 problems (18 errors, 10 warnings)
+
