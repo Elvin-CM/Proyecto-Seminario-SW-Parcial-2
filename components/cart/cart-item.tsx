@@ -1,5 +1,5 @@
 "use client";
-
+import { CART_STOCK_POLLING_MS } from "@/lib/config";
 import Image from "next/image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";

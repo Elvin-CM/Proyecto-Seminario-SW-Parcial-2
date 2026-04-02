@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { CART_EXPIRATION_MS } from "@/lib/config";
 
 export interface CartItem {
   id: string;
@@ -26,7 +27,6 @@ interface CartState {
   getAvailableStock: (productId: string, realStock: number) => number;
 }
 
-const CART_EXPIRATION_TIME = 15 * 60 * 1000; // 15 min para limpiar el carrito
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -36,7 +36,7 @@ export const useCartStore = create<CartState>()(
 
       addItem: (newItem) => {
         const now = Date.now();
-        const expiration = now + CART_EXPIRATION_TIME;
+        const expiration = now + CART_EXPIRATION_MS;
 
         const currentItems = get().items;
         const existingItem = currentItems.find((item) => item.id === newItem.id);
@@ -83,7 +83,7 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (id, quantity) => {
 
         const now = Date.now();
-        const expiration = now + CART_EXPIRATION_TIME;
+        const expiration = now + CART_EXPIRATION_MS;
 
         set({
           items: get().items.map((item) =>

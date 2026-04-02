@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { reserveStock, releaseReservation, getAvailableStockFromDB, addToMyCart, removeFromMyCart } from "@/lib/actions";
 import { toast } from "react-hot-toast";
 import { getCachedUserId, getSessionId } from "@/lib/client-auth";
+import { PRODUCT_STOCK_POLLING_MS } from "@/lib/config";
 
 interface AddToCartButtonProps {
   product: {
@@ -53,7 +54,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
         interval = null;
         return;
       }
-      if (!interval) interval = setInterval(fetchStock, 20000);
+      if (!interval) interval = setInterval(fetchStock, PRODUCT_STOCK_POLLING_MS);
       fetchStock();
     };
 

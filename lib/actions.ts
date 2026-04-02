@@ -11,8 +11,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { sendDeliveryStatusEmail, sendOrderConfirmationEmail } from "@/lib/order-email";
+import { CART_EXPIRATION_MS } from "@/lib/config";
 
-const CART_EXPIRATION_MS = 15 * 60 * 1000;
 
 function hasCartTablesInClient() {
   const p = prisma as unknown as {
