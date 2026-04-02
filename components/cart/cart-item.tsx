@@ -8,20 +8,12 @@ import { useCartStore, CartItem as CartItemType } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "react-hot-toast";
 import { releaseReservation, getAvailableStockFromDB, reserveStock, setMyCartQuantity, removeFromMyCart } from "@/lib/actions";
-import { getCachedUserId } from "@/lib/client-auth";
+import { getCachedUserId, getSessionId } from "@/lib/client-auth";
 
 interface CartItemProps {
   item: CartItemType;
 }
 
-function getSessionId(): string {
-  let sessionId = localStorage.getItem("cart-session-id");
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem("cart-session-id", sessionId);
-  }
-  return sessionId;
-}
 
 export function CartItem({ item }: CartItemProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);

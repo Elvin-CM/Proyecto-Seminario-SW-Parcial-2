@@ -4,8 +4,8 @@ import { useCartStore } from "@/lib/store";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { reserveStock, releaseReservation, getAvailableStockFromDB, addToMyCart, removeFromMyCart } from "@/lib/actions";
-import { getCachedUserId } from "@/lib/client-auth";
 import { toast } from "react-hot-toast";
+import { getCachedUserId, getSessionId } from "@/lib/client-auth";
 
 interface AddToCartButtonProps {
   product: {
@@ -15,16 +15,6 @@ interface AddToCartButtonProps {
     image: string;
     stock: number;
   };
-}
-
-// Genera o recupera un sessionId único por navegador
-function getSessionId(): string {
-  let sessionId = localStorage.getItem("cart-session-id");
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem("cart-session-id", sessionId);
-  }
-  return sessionId;
 }
 
 export function AddToCartButton({ product }: AddToCartButtonProps) {

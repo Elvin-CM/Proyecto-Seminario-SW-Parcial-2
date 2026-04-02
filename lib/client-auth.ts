@@ -24,3 +24,11 @@ export async function getCachedUserId(): Promise<string | null> {
   return pending;
 }
 
+export function getSessionId(): string {
+  let sessionId = localStorage.getItem("cart-session-id");
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem("cart-session-id", sessionId);
+  }
+  return sessionId;
+}
