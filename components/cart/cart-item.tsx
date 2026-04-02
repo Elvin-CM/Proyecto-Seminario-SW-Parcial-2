@@ -66,53 +66,37 @@ export function CartItem({ item }: CartItemProps) {
     return () => clearInterval(interval);
   }, [item.expiresAt]);
 
+  const updateCartQuantity = async (newQuantity: number, errorMsg: string) => {
+  const userId = await getCachedUserId();
+
+  if (userId) {
+    const result = await setMyCartQuantity(item.id, newQuantity);
+    if (!result.success) {
+      toast.error(result.error || errorMsg);
+      return;
+    }
+    setItems(result.items);
+    return;
+  }
+
+  const sessionId = getSessionId();
+  const reserve = await reserveStock(item.id, newQuantity, sessionId);
+  if (!reserve.success) {
+    toast.error(reserve.error || errorMsg);
+    return;
+  }
+  updateQuantity(item.id, newQuantity);
+};
+
   const handleIncrement = async () => {
-    if (item.quantity >= item.maxStock) return;
-
-    const userId = await getCachedUserId();
-    if (userId) {
-      const userResult = await setMyCartQuantity(item.id, item.quantity + 1);
-      if (!userResult.success) {
-        toast.error(userResult.error || "Stock insuficiente");
-        return;
-      }
-      setItems(userResult.items);
-      return;
-    }
-
-    const sessionId = getSessionId();
-    const guestReserve = await reserveStock(item.id, item.quantity + 1, sessionId);
-    if (!guestReserve.success) {
-      toast.error(guestReserve.error || "Stock insuficiente");
-      return;
-    }
-
-    updateQuantity(item.id, item.quantity + 1);
-  };
+  if (item.quantity >= item.maxStock) return;
+  await updateCartQuantity(item.quantity + 1, "Stock insuficiente");
+};
 
   const handleDecrement = async () => {
-    if (item.quantity <= 1) return;
-
-    const userId = await getCachedUserId();
-    if (userId) {
-      const userResult = await setMyCartQuantity(item.id, item.quantity - 1);
-      if (!userResult.success) {
-        toast.error(userResult.error || "Error al actualizar cantidad");
-        return;
-      }
-      setItems(userResult.items);
-      return;
-    }
-
-    const sessionId = getSessionId();
-    const guestReserve = await reserveStock(item.id, item.quantity - 1, sessionId);
-    if (!guestReserve.success) {
-      toast.error(guestReserve.error || "Error al actualizar cantidad");
-      return;
-    }
-
-    updateQuantity(item.id, item.quantity - 1);
-  };
+  if (item.quantity <= 1) return;
+  await updateCartQuantity(item.quantity - 1, "Error al actualizar cantidad");
+};
 
   const handleRemove = async () => {
     const userId = await getCachedUserId();
