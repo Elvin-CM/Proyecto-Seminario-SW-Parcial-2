@@ -47,23 +47,26 @@ async function sendEmail(params: {
   html: string;
   text: string;
 }) {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
+  const correoRemitente = process.env.EMAIL_USER;
+  const contrasenaRemitente = process.env.EMAIL_PASS;
 
-  if (!user || !pass) {
+  if (!correoRemitente || !contrasenaRemitente) {
     console.warn("Correo omitido: falta EMAIL_USER o EMAIL_PASS");
     return { sent: false, skipped: true as const };
   }
 
   const nodemailer = await import("nodemailer");
 
-  const transporter = nodemailer.createTransport({
+  const transportadorEmail = nodemailer.createTransport({
     service: "gmail",
-    auth: { user, pass },
+    auth: { 
+      user: correoRemitente, 
+      pass: contrasenaRemitente 
+    },
   });
 
-  await transporter.sendMail({
-    from: `"PrototypeStore" <${user}>`,
+  await transportadorEmail.sendMail({
+    from: `"PrototypeStore" <${correoRemitente}>`,
     to: params.to,
     subject: params.subject,
     html: params.html,

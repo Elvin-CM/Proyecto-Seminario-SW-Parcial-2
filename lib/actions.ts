@@ -473,7 +473,7 @@ async function mutateUserCartItem(params: {
     });
 
     return (cartWithItems?.items ?? []).map(mapDbCartItemToStoreItem);
-  });
+  },{ timeout: 10000 });
 }
 
 export async function addToMyCart(productId: string, quantityToAdd: number) {
