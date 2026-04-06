@@ -38,8 +38,6 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
   const statusFilter = params.status;
 
   const where: Prisma.OrderWhereInput = {};
-
-  // Construir filtros de manera que funcionen correctamente juntos
   const filters: Prisma.OrderWhereInput[] = [];
 
   if (customerFilter) {
@@ -53,12 +51,9 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
   }
 
   if (statusFilter && ["PENDING", "PACKAGING", "SHIPPED", "RECEIVED"].includes(statusFilter)) {
-    filters.push({
-      deliveryStatus: statusFilter,
-    });
+    filters.push({ deliveryStatus: statusFilter });
   }
 
-  // Si hay múltiples filtros, combinarlos con AND
   if (filters.length > 0) {
     where.AND = filters;
   }
@@ -68,19 +63,11 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     orderBy: { createdAt: "desc" },
     include: {
       user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+        select: { id: true, name: true, email: true },
       },
       items: {
         include: {
-          product: {
-            select: {
-              name: true,
-            },
-          },
+          product: { select: { name: true } },
         },
       },
     },
@@ -92,7 +79,9 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12">
-      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+
+      {/* Header: título + filtros */}
+      <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
             <ShieldCheck className="h-4 w-4" />
@@ -146,27 +135,28 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
             )}
           </div>
         </form>
+      </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-sm text-muted-foreground">Pedidos</p>
-              <p className="text-2xl font-bold">{totalOrders}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-sm text-muted-foreground">Enviados</p>
-              <p className="text-2xl font-bold">{shippedOrders}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-sm text-muted-foreground">Recibidos</p>
-              <p className="text-2xl font-bold">{receivedOrders}</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Tarjetas de conteo — separadas del header */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-muted-foreground">Pedidos</p>
+            <p className="text-2xl font-bold">{totalOrders}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-muted-foreground">Enviados</p>
+            <p className="text-2xl font-bold">{shippedOrders}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-muted-foreground">Recibidos</p>
+            <p className="text-2xl font-bold">{receivedOrders}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="space-y-6">
