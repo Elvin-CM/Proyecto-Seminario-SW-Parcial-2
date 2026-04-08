@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Package, ShoppingCart } from "lucide-react";
+import { ShieldCheck, Package, ShoppingCart, BarChart3, PieChart } from "lucide-react";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -19,6 +19,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="bg-white border-b sticky top-[64px] z-40">
         <div className="container mx-auto px-4 max-w-7xl">
            <nav className="flex space-x-1 py-1">
+             <Link 
+               href="/admin" 
+               className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors"
+             >
+               <BarChart3 className="h-4 w-4" />
+               Dashboard
+             </Link>
+             <Link 
+               href="/admin/reports" 
+               className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors"
+             >
+               <PieChart className="h-4 w-4" />
+               Reportes
+             </Link>
              <Link 
                href="/admin/orders" 
                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors"
