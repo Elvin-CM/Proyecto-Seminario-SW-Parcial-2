@@ -4,7 +4,7 @@ import { CartItem } from "@/lib/store";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { sendOrderConfirmationEmail } from "@/lib/order-email";
+import { sendOrderConfirmationEmail, sendDeliveryStatusEmail } from "@/lib/order-email";
 import { OrderReceivedSchema } from "@/lib/validations";
 import { redirect } from "next/navigation";
 
@@ -158,6 +158,16 @@ export async function confirmOrderReceived(formData: FormData) {
         receivedAt: new Date(),
       },
     });
+
+    // Enviar correo de confirmación de recepción
+    const orderForEmail = await getOrderEmailPayload(orderId);
+    if (orderForEmail) {
+      try {
+        await sendDeliveryStatusEmail(orderForEmail);
+      } catch (emailError) {
+        console.error("Received confirmation email failed:", emailError);
+      }
+    }
 
     revalidateOrderPaths(orderId);
   } catch (error) {
