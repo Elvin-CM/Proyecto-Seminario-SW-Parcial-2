@@ -10,6 +10,7 @@ import { CartWrapper } from "@/components/layout/cart-wrapper";
 import { UserButton } from "@/components/auth/user-button";
 import { GlobalEffects } from "@/components/GlobalEffects";
 import { CartSync } from "@/components/cart/cart-sync";
+import { NavbarActions } from "@/components/layout/navbar-actions";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -37,7 +38,7 @@ export default function RootLayout({
 
             <div className="flex items-center gap-4">
               <UserButton />
-              <CartWrapper />
+              <NavbarActions />
             </div>
           </div>
         </header>
